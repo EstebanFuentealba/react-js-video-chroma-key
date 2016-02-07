@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <script src="https://fb.me/react-with-addons-0.14.6.js"></script>
+    <script src="https://fb.me/react-dom-0.14.6.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-core/5.8.23/browser.min.js"></script>
+  </head>
+  <body>
+    <div id="info-player"></div>
+    <script type="text/babel">
+    class ChromaKey extends React.Component {
+      constructor(props) {
+        super(props);
+        this.state = {
+          oggSupported: false,
+          mp4Supported: false,
+          webmSupported: false,
+          isPlaying: false,
+          guid: this.guid(),
+          timer: null
+        };
+      }
+      guid() {
+        function s4() {
+          return Math.floor((1 + Math.random()) * 0x10000)
+            .toString(16)
+            .substring(1);
+        }
+        return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
+          s4() + '-' + s4() + s4() + s4();
+      }
+      play() {
+        if(!this.state.isPlaying){
+          this.refs["front-" + this.state.guid].play();
+          this.refs["background-" + this.state.guid].play();
+        } else {
+          this.refs["front-" + this.state.guid].pause();
+          this.refs["background-" + this.state.guid].pause();
+          clearInterval(this.state.timer);
+        }
+        this.setState({
+          isPlaying: !this.state.isPlaying
+        });
+        this.draw();
+      }
+      draw() {
+          if (window.requestAnimationFrame) window.requestAnimationFrame(()=>{
+            this.draw();
+          }.bind(this));
+          // IE implementation
+          else if (window.msRequestAnimationFrame) window.msRequestAnimationFrame(()=>{
+            this.draw();
+          }.bind(this));
+          // Firefox implementation
+          else if (window.mozRequestAnimationFrame) window.mozRequestAnimationFrame(()=>{
+            this.draw();
+          }.bind(this));
+          // Chrome implementation
+          else if (window.webkitRequestAnimationFrame) window.webkitRequestAnimationFrame(()=>{
+            this.draw();
+          }.bind(this));
+          // Other browsers that do not yet support feature
+          else {
+            if(this.state.isPlaying){
+              this.setState({
+                timer: setTimeout(() => {
+                  this.draw();
+                }.bind(this), 16.7)
+              })
+            }
+          }
+
+          this.drawVideoOnCanvas();
+      }
+      drawVideoOnCanvas() {
+        let object = this.refs["front-" + this.state.guid],
+            backgroundObject = this.refs["background-" + this.state.guid],
+            width = this.props.width,
+            height = this.props.height,
+            canvas = this.refs["out-" + this.state.guid];
+
+            canvas.setAttribute('width', width);
+            canvas.setAttribute('height', height);
+            if (canvas.getContext) {
+                var context = canvas.getContext('2d');
+                context.drawImage(backgroundObject, 0, 0, width, height);
+                var imgBackgroundData = context.getImageData(0, 0, width, height);
+                context.drawImage(object, 0, 0, width, height);
+                let imgDataNormal = context.getImageData(0, 0, width, height);
+                var imgData = context.createImageData(width, height);
+
+                for (let i = 0; i < imgData.width * imgData.height * 4; i += 4) {
+                    var r = imgDataNormal.data[i + 0];
+                    var g = imgDataNormal.data[i + 1];
+                    var b = imgDataNormal.data[i + 2];
+                    var a = imgDataNormal.data[i + 3];
+                    // compare rgb levels for green and set alphachannel to 0;
+                    if (r <= this.props.alphachannel.r && b <= this.props.alphachannel.b && g >= this.props.alphachannel.g) {
+                        a = 0;
+                    }
+                    if (a != 0) {
+                        imgData.data[i + 0] = r;
+                        imgData.data[i + 1] = g;
+                        imgData.data[i + 2] = b;
+                        imgData.data[i + 3] = a;
+                    }
+                }
+
+                for (let y = 0; y < imgData.height; y++) {
+                    for (let x = 0; x < imgData.width; x++) {
+                        var r = imgData.data[((imgData.width * y) + x) * 4];
+                        var g = imgData.data[((imgData.width * y) + x) * 4 + 1];
+                        var b = imgData.data[((imgData.width * y) + x) * 4 + 2];
+                        var a = imgData.data[((imgData.width * y) + x) * 4 + 3];
+                        if (imgData.data[((imgData.width * y) + x) * 4 + 3] != 0) {
+                            let offsetYup = y - 1;
+                            let offsetYdown = y + 1;
+                            let offsetXleft = x - 1;
+                            let offsetxRight = x + 1;
+                            var change=false;
+                            if(offsetYup>0)
+                            {
+                                if(imgData.data[((imgData.width * (y-1) ) + (x)) * 4 + 3]==0)
+                                {
+                                    change=true;
+                                }
+                            }
+                            if (offsetYdown < imgData.height)
+                            {
+                                if (imgData.data[((imgData.width * (y + 1)) + (x)) * 4 + 3] == 0) {
+                                    change = true;
+                                }
+                            }
+                            if (offsetXleft > -1) {
+                                if (imgData.data[((imgData.width * y) + (x -1)) * 4 + 3] == 0) {
+                                    change = true;
+                                }
+                            }
+                            if (offsetxRight < imgData.width) {
+                                if (imgData.data[((imgData.width * y) + (x + 1)) * 4 + 3] == 0) {
+                                    change = true;
+                                }
+                            }
+                            if (change) {
+                                var gray = (imgData.data[((imgData.width * y) + x) * 4 + 0] * .393) + (imgData.data[((imgData.width * y) + x) * 4 + 1] * .769) + (imgData.data[((imgData.width * y) + x) * 4 + 2] * .189);
+                                imgData.data[((imgData.width * y) + x) * 4] = (gray * 0.2) + (imgBackgroundData.data[((imgData.width * y) + x) * 4] *0.9);
+                                imgData.data[((imgData.width * y) + x) * 4 + 1] = (gray * 0.2) + (imgBackgroundData.data[((imgData.width * y) + x) * 4 + 1]*0.9);
+                                imgData.data[((imgData.width * y) + x) * 4 + 2] = (gray * 0.2) + (imgBackgroundData.data[((imgData.width * y) + x) * 4 + 2] * 0.9);
+                                imgData.data[((imgData.width * y) + x) * 4 + 3] = 255;
+                            }
+                        }
+
+                    }
+                }
+
+                for (let i = 0; i < imgData.width * imgData.height * 4; i += 4) {
+                    var r = imgData.data[i + 0];
+                    var g = imgData.data[i + 1];
+                    var b = imgData.data[i + 2];
+                    var a = imgData.data[i + 3];
+                    if (a == 0) {
+                            imgData.data[i + 0] = imgBackgroundData.data[i + 0];
+                            imgData.data[i + 1] = imgBackgroundData.data[i + 1];
+                            imgData.data[i + 2] = imgBackgroundData.data[i + 2];
+                            imgData.data[i + 3] = imgBackgroundData.data[i + 3];
+                    }
+                }
+                context.putImageData(imgData, 0, 0);
+
+            }
+      }
+      render() {
+        return (
+          <div>
+            <canvas id="videoscreen" ref={"out-" + this.state.guid } width={this.props.width} height={this.props.height}>
+                <p>Sorry your browser does not support HTML5</p>
+            </canvas>
+            <video ref={"front-" + this.state.guid } loop="loop" preload="auto" width={((this.props.onlyShowOutput) ? 0 : this.props.width)} height={((this.props.onlyShowOutput) ? 0 : this.props.height)}>
+            	{this.props.front.map((video, index ) => {
+            		return (
+            			<source key={'front-video-' + index} src={video.src} type={video.type} />
+            		)
+            	})}
+
+            </video>
+            <video ref={"background-" + this.state.guid } loop="loop" preload="auto" width={((this.props.onlyShowOutput) ? 0 : this.props.width)} height={((this.props.onlyShowOutput) ? 0 : this.props.height)}>
+                {this.props.background.map((video, index ) => {
+            		return (
+            			<source key={'background-video-' + index} src={video.src} type={video.type} />
+            		)
+            	})}
+            </video>
+            <button onClick={this.play.bind(this)}>PLAY</button>
+          </div>
+        );
+      }
+    }
+    class App extends React.Component {
+      constructor(props) {
+        super(props);
+      }
+      render() {
+        return (
+          <div>
+            <h1>test</h1>
+            <ChromaKey
+              width="320"
+              height="180"
+              front={[
+              	{
+	              	type: 'video/mp4',
+	              	src: "./videos/Snoop.mp4"
+              	}
+              ]}
+              background={[
+              	{
+              		type: 'video/ogg',
+			  		      src: "./videos/NewRow.ogv"
+              	}
+              ]}
+              alphachannel={{
+              	r: 25,
+              	g: 90,
+              	b: 60
+              }}
+              onlyShowOutput={true}
+               />
+          </div>
+        );
+      }
+    }
+    ReactDOM.render(
+      <App />,
+      document.getElementById('info-player')
+    );
+    </script>
+  </body>
+</html>
