@@ -188,9 +188,6 @@
         render() {
           return (
             <div>
-              <canvas id="videoscreen" ref={"out-" + this.state.guid } width={this.props.width} height={this.props.height}>
-                  <p>Sorry your browser does not support HTML5</p>
-              </canvas>
               <video ref={"front-" + this.state.guid } loop="loop" preload="auto" width={((this.props.onlyShowOutput) ? 0 : this.props.width)} height={((this.props.onlyShowOutput) ? 0 : this.props.height)}>
               	{this.props.front.map((video, index ) => {
               		return (
@@ -206,6 +203,9 @@
               		)
               	})}
               </video>
+              <canvas id="videoscreen" ref={"out-" + this.state.guid } width={this.props.width} height={this.props.height}>
+                  <p>Sorry your browser does not support HTML5</p>
+              </canvas>
               <button onClick={this.play.bind(this)}>PLAY</button>
             </div>
           );
