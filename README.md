@@ -5,4 +5,7 @@ El croma, o llave de color (del inglés chroma key) es una técnica audiovisual 
 Se debe tener los videos en el mismo servidor que el código
 
 # Ejemplo
+
+Puedes ver un ejemplo en [http://estebanfuentealba.github.io/react-js-video-chroma-key/](http://estebanfuentealba.github.io/react-js-video-chroma-key/)
+
 ![Demo](https://github.com/EstebanFuentealba/react-js-video-chroma-key/blob/master/assets/screenshot.png)
